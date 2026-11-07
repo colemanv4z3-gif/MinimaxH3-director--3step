@@ -1,5 +1,5 @@
 # Dockerfile for ComfyUI Video LTX Minimax on RunPod with RTX 5090
-FROM nvidia/cuda:12.4-devel-ubuntu22.04
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
