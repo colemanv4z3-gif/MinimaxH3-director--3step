@@ -1,58 +1,57 @@
-# Dockerfile for ComfyUI Video LTX Minimax on RunPod with RTX 5090
 FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 
-# Install system dependencies
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Installazione dipendenze di sistema essenziali (incluso FFmpeg per la gestione video)
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
     git \
     wget \
     curl \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
+    ffmpeg \
+    python3-pip \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy ComfyUI source code
-COPY ComfyUI-Video-LTX_Minimax/ComfyUI-Easy-Install/ComfyUI-Easy-Install/ComfyUI/ /app/ComfyUI
+# Clonazione del repository ufficiale di ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/ComfyUI
 
-# Copy python_embeded directory
-COPY ComfyUI-Video-LTX_Minimax/ComfyUI-Easy-Install/ComfyUI-Easy-Install/python_embeded/ /app/python_embeded
+WORKDIR /app/ComfyUI
 
-# Set environment variables
-ENV PYTHONPATH=/app/ComfyUI
-ENV PATH=/app/python_embeded/bin:$PATH
+# Installazione di PyTorch con supporto CUDA 12.4 (compatibile con GPU serie RTX 40/50)
+RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir -r /app/ComfyUI/requirements.txt
+# Installazione dei requisiti base di ComfyUI
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Create necessary directories
-RUN mkdir -p /app/ComfyUI/input /app/ComfyUI/output /app/ComfyUI/models /app/ComfyUI/custom_nodes
+# --- INSTALLAZIONE CUSTOM NODES PER MINIMAX H3 ---
+WORKDIR /app/ComfyUI/custom_nodes
 
-# Copy custom nodes (OTTIMIZATO)
-# Copia solo i custom nodes necessari per i workflow minimax LTX
-RUN git clone https://github.com/ltdrdata/ComfyUI-Impact-Pack.git /app/ComfyUI/custom_nodes/ComfyUI-Impact-Pack 2>/dev/null || true
-RUN git clone https://github.com/guangzhengliang/ComfyUI-UltimateSDUpscaleGuider_H3.git /app/ComfyUI/custom_nodes/ComfyUI-UltimateSDUpscaleGuider_H3 2>/dev/null || true
-RUN git clone https://github.com/Efficient-Motion-Fields/ComfyUI-H3-Motion-Context-MultiRef.git /app/ComfyUI/custom_nodes/ComfyUI-H3-Motion-Context-MultiRef 2>/dev/null || true
-RUN git clone https://github.com/kijai/ComfyUI-Crystools.git /app/ComfyUI/custom_nodes/ComfyUI-Crystools 2>/dev/null || true
-RUN git clone https://github.com/ltdrdata/ComfyUI-VideoHelperSuite.git /app/ComfyUI/custom_nodes/ComfyUI-VideoHelperSuite 2>/dev/null || true
-RUN git clone https://github.com/comfyanonymous/ComfyUI-MinimaxH3-Preview.git /app/ComfyUI/custom_nodes/ComfyUI-MiniMaxH3-Preview 2>/dev/null || true
-RUN git clone https://github.com/kijai/ComfyUI-WarpedToolset.git /app/ComfyUI/custom_nodes/ComfyUI-WarpedToolset 2>/dev/null || true
+# 1. Nodi specifici H3 (Multishot e Motion Context Multi-Ref)
+RUN git clone https://github.com/jlucasmcrell/ComfyUI-H3-Multishot.git && \
+    git clone https://github.com/seitanism/ComfyUI-H3-Motion-Context-MultiRef.git
 
+# 2. Utilità e supporto GGUF/Attention
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
+    git clone https://github.com/city96/ComfyUI-GGUF.git && \
+    git clone https://github.com/ltdrdata/ComfyUI-Manager.git
 
+# Installazione dei requirements specifici dei custom nodes (gestendo eventuali errori non bloccanti)
+RUN pip3 install --no-cache-dir -r ComfyUI-H3-Multishot/requirements.txt || true
+RUN pip3 install --no-cache-dir -r ComfyUI-H3-Motion-Context-MultiRef/requirements.txt || true
+RUN pip3 install --no-cache-dir -r ComfyUI-KJNodes/requirements.txt || true
+RUN pip3 install --no-cache-dir -r ComfyUI-GGUF/requirements.txt || true
+RUN pip3 install --no-cache-dir -r ComfyUI-Manager/requirements.txt || true
 
-# Copy startup script
-COPY start_comfyui-ltx.sh /app/start_comfyui-ltx.sh
-RUN chmod +x /app/start_comfyui-ltx.sh
+# Installazione di SageAttention per l'ottimizzazione della VRAM
+RUN pip3 install --no-cache-dir sage-attention || true
 
-# Expose port
+# Esposizione della porta di default di ComfyUI
 EXPOSE 8188
 
-# Default command
-CMD ["/app/start_comfyui-ltx.sh"]
+WORKDIR /app/ComfyUI
+
+# Avvio di ComfyUI con ascolto su tutte le interfacce di rete
+CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
