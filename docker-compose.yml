@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  comfyui-ltx:
+    build: .
+    container_name: comfyui-ltx-minimax
+    ports:
+      - "8188:8188"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - PYTHONPATH=/app/ComfyUI
+      - PATH=/app/python_embeded/bin:$PATH
+    volumes:
+      - ./ComfyUI/models:/app/ComfyUI/models
+      - ./ComfyUI/input:/app/ComfyUI/input
+      - ./ComfyUI/output:/app/ComfyUI/output
+      - ./ComfyUI/custom_nodes:/app/ComfyUI/custom_nodes
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - comfyui-ltx-network
+
+networks:
+  comfyui-ltx-network:
+    driver: bridge
