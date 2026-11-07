@@ -45,9 +45,7 @@ RUN git clone https://github.com/ltdrdata/ComfyUI-VideoHelperSuite.git /app/Comf
 RUN git clone https://github.com/comfyanonymous/ComfyUI-MinimaxH3-Preview.git /app/ComfyUI/custom_nodes/ComfyUI-MiniMaxH3-Preview 2>/dev/null || true
 RUN git clone https://github.com/kijai/ComfyUI-WarpedToolset.git /app/ComfyUI/custom_nodes/ComfyUI-WarpedToolset 2>/dev/null || true
 
-# Copy specific custom node files needed for workflows
-COPY "C:/Users/simon/Desktop/Aria pura/Workflow minimah Personalizzati Mini Max H3/muse_latent_io.py" /app/ComfyUI/custom_nodes/muse_latent_io.py
-RUN chmod +x /app/ComfyUI/custom_nodes/muse_latent_io.py
+
 
 # Copy startup script
 COPY start_comfyui-ltx.sh /app/start_comfyui-ltx.sh
